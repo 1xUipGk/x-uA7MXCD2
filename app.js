@@ -67,16 +67,43 @@ document.addEventListener('DOMContentLoaded', () => {
                     recorder.start();
 
                     let frameCount = 0;
-                    const totalFrames = video.duration * 30; // تقدير 30 إطار في الثانية
+                    const fps = 30; // تقدير 30 إطار في الثانية
+                    const totalFrames = video.duration * fps;
 
                     function drawFrame() {
                         if (video.paused || video.ended) return;
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        
+
+                        // تحديد حجم الفيديو الجديد بناءً على الأبعاد القصوى
+                        const maxWidth = 900;
+                        const maxHeight = 1380;
+                        let newWidth = video.videoWidth;
+                        let newHeight = video.videoHeight;
+
+                        if (newWidth > maxWidth || newHeight > maxHeight) {
+                            const widthRatio = maxWidth / newWidth;
+                            const heightRatio = maxHeight / newHeight;
+                            const ratio = Math.min(widthRatio, heightRatio);
+                            newWidth = newWidth * ratio;
+                            newHeight = newHeight * ratio;
+                        }
+
+                        canvas.width = newWidth;
+                        canvas.height = newHeight;
+                        ctx.drawImage(video, 0, 0, newWidth, newHeight);
+
+                        // تطبيق قناع مستطيل بزوايا دائرية
+                        const borderRadius = 42;
+                        const mask = createRoundedRectangleMask(newWidth, newHeight, borderRadius);
+                        ctx.globalCompositeOperation = 'destination-in';
+                        ctx.drawImage(mask, 0, 0);
+
                         // إضافة العلامة المائية
-                        const watermarkSize = Math.min(canvas.width, canvas.height) * 0.2;
-                        ctx.drawImage(watermark, canvas.width - watermarkSize - 10, canvas.height - watermarkSize - 10, watermarkSize, watermarkSize);
-                        
+                        const watermarkSize = Math.min(newWidth, newHeight) * 0.2;
+                        const watermarkX = newWidth - watermarkSize - 10;
+                        const watermarkY = newHeight - watermarkSize - 10;
+                        ctx.globalCompositeOperation = 'source-over';
+                        ctx.drawImage(watermark, watermarkX, watermarkY, watermarkSize, watermarkSize);
+
                         frameCount++;
                         progressCallback(Math.min((frameCount / totalFrames) * 100, 100));
                         requestAnimationFrame(drawFrame);
@@ -87,5 +114,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
             };
         });
+    }
+
+    function createRoundedRectangleMask(width, height, radius) {
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = width;
+        maskCanvas.height = height;
+        const maskCtx = maskCanvas.getContext('2d');
+        maskCtx.fillStyle = 'black';
+        maskCtx.beginPath();
+        maskCtx.moveTo(radius, 0);
+        maskCtx.lineTo(width - radius, 0);
+        maskCtx.arc(width - radius, radius, radius, -Math.PI / 2, 0);
+        maskCtx.lineTo(width, height - radius);
+        maskCtx.arc(width - radius, height - radius, radius, 0, Math.PI / 2);
+        maskCtx.lineTo(radius, height);
+        maskCtx.arc(radius, height - radius, radius, Math.PI / 2, Math.PI);
+        maskCtx.lineTo(0, radius);
+        maskCtx.arc(radius, radius, radius, Math.PI, -Math.PI / 2);
+        maskCtx.closePath();
+        maskCtx.fill();
+        return maskCanvas;
     }
 });
