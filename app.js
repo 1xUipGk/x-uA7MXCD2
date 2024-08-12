@@ -47,16 +47,19 @@ document.addEventListener('DOMContentLoaded', () => {
             video.src = URL.createObjectURL(videoFile);
             video.onloadedmetadata = () => {
                 const canvas = document.createElement('canvas');
-                canvas.width = 1080; // عرض الفيديو النهائي
-                canvas.height = 1920; // ارتفاع الفيديو النهائي
                 const ctx = canvas.getContext('2d');
 
-                const watermark = new Image();
-                watermark.src = watermarkPath;
-                watermark.onload = () => {
-                    const background = new Image();
-                    background.src = backgroundImage;
-                    background.onload = () => {
+                const background = new Image();
+                background.src = backgroundImage;
+                background.onload = () => {
+                    const bgWidth = background.width;
+                    const bgHeight = background.height;
+                    canvas.width = bgWidth;
+                    canvas.height = bgHeight;
+
+                    const watermark = new Image();
+                    watermark.src = watermarkPath;
+                    watermark.onload = () => {
                         const stream = canvas.captureStream();
                         const recorder = new MediaRecorder(stream, { mimeType: 'video/mp4' }); // تغيير MIME type إلى mp4
 
@@ -72,52 +75,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         let frameCount = 0;
                         const fps = 30; // تقدير 30 إطار في الثانية
-                        const totalFrames = video.duration * fps;
+                        video.play();
+                        video.addEventListener('play', function () {
+                            function drawFrame() {
+                                if (video.paused || video.ended) return;
 
-                        function drawFrame() {
-                            if (video.paused || video.ended) return;
+                                // تحديد حجم الفيديو الجديد بناءً على الأبعاد القصوى
+                                const maxWidth = 900;
+                                const maxHeight = 1380;
+                                let newWidth = video.videoWidth;
+                                let newHeight = video.videoHeight;
 
-                            // تحديد حجم الفيديو الجديد بناءً على الأبعاد القصوى
-                            const maxWidth = 900;
-                            const maxHeight = 1380;
-                            let newWidth = video.videoWidth;
-                            let newHeight = video.videoHeight;
+                                if (newWidth > maxWidth || newHeight > maxHeight) {
+                                    const widthRatio = maxWidth / newWidth;
+                                    const heightRatio = maxHeight / newHeight;
+                                    const ratio = Math.min(widthRatio, heightRatio);
+                                    newWidth = newWidth * ratio;
+                                    newHeight = newHeight * ratio;
+                                }
 
-                            if (newWidth > maxWidth || newHeight > maxHeight) {
-                                const widthRatio = maxWidth / newWidth;
-                                const heightRatio = maxHeight / newHeight;
-                                const ratio = Math.min(widthRatio, heightRatio);
-                                newWidth = newWidth * ratio;
-                                newHeight = newHeight * ratio;
+                                canvas.width = bgWidth;
+                                canvas.height = bgHeight;
+                                ctx.drawImage(background, 0, 0, bgWidth, bgHeight);
+
+                                // ضبط موقع الفيديو داخل الخلفية
+                                const xOffset = (bgWidth - newWidth) / 2;
+                                const yOffset = (bgHeight - newHeight) / 2;
+
+                                ctx.drawImage(video, xOffset, yOffset, newWidth, newHeight);
+
+                                // تطبيق قناع مستطيل بزوايا دائرية
+                                const borderRadius = 42;
+                                const mask = createRoundedRectangleMask(newWidth, newHeight, borderRadius);
+                                ctx.globalCompositeOperation = 'destination-in';
+                                ctx.drawImage(mask, xOffset, yOffset);
+
+                                // إضافة العلامة المائية
+                                const watermarkSize = Math.min(newWidth, newHeight) * 0.2;
+                                const watermarkX = xOffset + (newWidth - watermarkSize) / 2;
+                                const watermarkY = yOffset + newHeight - watermarkSize - 10;
+                                ctx.globalCompositeOperation = 'source-over';
+                                ctx.drawImage(watermark, watermarkX, watermarkY, watermarkSize, watermarkSize);
+
+                                frameCount++;
+                                progressCallback(Math.min((frameCount / (video.duration * fps)) * 100, 100));
+                                requestAnimationFrame(drawFrame);
                             }
 
-                            canvas.width = newWidth;
-                            canvas.height = newHeight;
-                            ctx.drawImage(video, 0, 0, newWidth, newHeight);
-
-                            // تطبيق قناع مستطيل بزوايا دائرية
-                            const borderRadius = 42;
-                            const mask = createRoundedRectangleMask(newWidth, newHeight, borderRadius);
-                            ctx.globalCompositeOperation = 'destination-in';
-                            ctx.drawImage(mask, 0, 0);
-
-                            // إضافة الخلفية
-                            ctx.globalCompositeOperation = 'source-over';
-                            ctx.drawImage(background, 0, 0, 1080, 1920);
-
-                            // إضافة العلامة المائية
-                            const watermarkSize = Math.min(newWidth, newHeight) * 0.2;
-                            const watermarkX = newWidth - watermarkSize - 10;
-                            const watermarkY = newHeight - watermarkSize - 10;
-                            ctx.drawImage(watermark, watermarkX, watermarkY, watermarkSize, watermarkSize);
-
-                            frameCount++;
-                            progressCallback(Math.min((frameCount / totalFrames) * 100, 100));
-                            requestAnimationFrame(drawFrame);
-                        }
-
-                        video.play();
-                        drawFrame();
+                            drawFrame();
+                        });
                     };
                 };
             };
