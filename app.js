@@ -8,37 +8,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const backgroundImage = 'reels_background.jpg';
 
     processBtn.addEventListener('click', async () => {
-        if (!inputVideo.files.length) {
-            alert('الرجاء اختيار فيديو أولاً');
-            return;
-        }
+    if (!inputVideo.files.length) {
+        alert('الرجاء اختيار فيديو أولاً');
+        return;
+    }
 
-        const file = inputVideo.files[0];
-        const watermark = watermarkSelect.value;
+    const file = inputVideo.files[0];
+    const watermark = watermarkSelect.value;
 
-        processBtn.disabled = true;
-        progressBar.value = 0;
+    processBtn.disabled = true;
+    progressBar.value = 0;
 
-        try {
-            const processedVideoBlob = await processVideo(file, watermark, (progress) => {
-                progressBar.value = progress;
-            });
+    try {
+        const processedVideoBlob = await processVideo(file, watermark, (progress) => {
+            progressBar.value = progress;
+        });
 
-            const videoUrl = URL.createObjectURL(processedVideoBlob);
-            preview.src = videoUrl;
-            preview.style.display = 'block';
+        const videoUrl = URL.createObjectURL(processedVideoBlob);
+        preview.src = videoUrl;
+        preview.style.display = 'block';
 
+        // Show download button
+        const downloadBtn = document.getElementById('download-btn');
+        downloadBtn.style.display = 'block';
+        downloadBtn.onclick = () => {
             const a = document.createElement('a');
             a.href = videoUrl;
             a.download = outputVideo.value || 'processed_video.webm';
             a.click();
-        } catch (error) {
-            console.error('Error processing video:', error);
-            alert('حدث خطأ أثناء معالجة الفيديو');
-        } finally {
-            processBtn.disabled = false;
-        }
-    });
+        };
+    } catch (error) {
+        console.error('Error processing video:', error);
+        alert('حدث خطأ أثناء معالجة الفيديو');
+    } finally {
+        processBtn.disabled = false;
+    }
+});
+
 
     async function processVideo(videoFile, watermarkPath, progressCallback) {
         return new Promise((resolve, reject) => {
