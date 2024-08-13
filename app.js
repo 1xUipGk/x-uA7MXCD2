@@ -40,19 +40,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
- async function processVideo(videoFile, watermarkPath, progressCallback) {
+    async function processVideo(videoFile, watermarkPath, progressCallback) {
     return new Promise((resolve, reject) => {
         const video = document.createElement('video');
         video.src = URL.createObjectURL(videoFile);
         video.onloadedmetadata = () => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            canvas.width = 1080;
-            canvas.height = 1920;
 
             const background = new Image();
             background.src = backgroundImage; // هذا هو reels_background.jpg
             background.onload = () => {
+                canvas.width = 1080;
+                canvas.height = 1920;
+
                 const watermark = new Image();
                 watermark.src = watermarkPath;
                 watermark.onload = () => {
@@ -76,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         function drawFrame() {
                             if (video.paused || video.ended) return;
 
-                            // رسم صورة الخلفية بحجم الكانفا كاملاً
+                            // رسم صورة الخلفية أولاً
                             ctx.drawImage(background, 0, 0, 1080, 1920);
 
                             const maxWidth = 900;
@@ -98,18 +99,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             // رسم الفيديو فوق الخلفية
                             ctx.drawImage(video, xOffset, yOffset, newWidth, newHeight);
 
-                            // تطبيق القناع ذو الزوايا المستديرة على الفيديو فقط
+                            // تطبيق القناع ذو الزوايا المستديرة
+                            const borderRadius = 42;
+                            const mask = createRoundedRectangleMask(newWidth, newHeight, borderRadius);
                             ctx.globalCompositeOperation = 'destination-in';
-                            roundRect(ctx, xOffset, yOffset, newWidth, newHeight, 42);
+                            ctx.drawImage(mask, xOffset, yOffset);
                             ctx.globalCompositeOperation = 'source-over';
 
-                            // إعادة رسم الخلفية حول الفيديو
-                            ctx.drawImage(background, 0, 0, xOffset, 1920); // الجانب الأيسر
-                            ctx.drawImage(background, xOffset + newWidth, 0, 1080 - (xOffset + newWidth), 1920); // الجانب الأيمن
-                            ctx.drawImage(background, xOffset, 0, newWidth, yOffset); // الأعلى
-                            ctx.drawImage(background, xOffset, yOffset + newHeight, newWidth, 1920 - (yOffset + newHeight)); // الأسفل
-
-                            // إضافة العلامة المائية بدون تغطية
+                            // إضافة العلامة المائية
                             const watermarkWidth = 102;
                             const watermarkHeight = 50;
                             const watermarkX = xOffset + (newWidth - watermarkWidth) / 2;
@@ -129,18 +126,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 }
 
-// دالة مساعدة لرسم مستطيل بزوايا مستديرة
-function roundRect(ctx, x, y, width, height, radius) {
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + width - radius, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-    ctx.lineTo(x + width, y + height - radius);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-    ctx.lineTo(x + radius, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
-    ctx.fill();
-}
+    function createRoundedRectangleMask(width, height, radius) {
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = width;
+        maskCanvas.height = height;
+        const maskCtx = maskCanvas.getContext('2d');
+        maskCtx.fillStyle = 'black';
+        maskCtx.beginPath();
+        maskCtx.moveTo(radius, 0);
+        maskCtx.lineTo(width - radius, 0);
+        maskCtx.arc(width - radius, radius, radius, -Math.PI / 2, 0);
+        maskCtx.lineTo(width, height - radius);
+        maskCtx.arc(width - radius, height - radius, radius, 0, Math.PI / 2);
+        maskCtx.lineTo(radius, height);
+        maskCtx.arc(radius, height - radius, radius, Math.PI / 2, Math.PI);
+        maskCtx.lineTo(0, radius);
+        maskCtx.arc(radius, radius, radius, Math.PI, -Math.PI / 2);
+        maskCtx.closePath();
+        maskCtx.fill();
+        return maskCanvas;
+    }
+});
