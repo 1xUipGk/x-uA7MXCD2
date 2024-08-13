@@ -1,19 +1,20 @@
 body {
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+    background-color: var(--background-color);
+    font-family: 'Arial', sans-serif;
+    color: var(--text-color);
     margin: 0;
-    background-color: #f0f0f0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 .container {
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
     width: 300px;
+    max-width: 320px;
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 10px;
 }
 
 input, select, button {
@@ -26,9 +27,59 @@ input, select, button {
 
 progress {
     width: 100%;
+    background-color: #bef73c !important;
+    transition: width .6s ease;
+    border-radius: 45px;
+    height: 7px;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -webkit-box-pack: center;
+    color: #fff;
 }
 
 #preview {
     width: 100%;
     margin-top: 10px;
+}
+
+nav.navbar {
+    padding: 10px 0;
+    text-align: center;
+}
+
+:root {
+    --background-color: #13181b;
+    --text-color: #ffffff;
+    --container-background: #1c2327;
+    --input-background: #2a3035;
+    --button-color: #bef73c;
+    --button-text-color: #13181b;
+    --border-color: #2a3035;
+}
+
+
+select#watermark-select {
+    width: 100%;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #1c2327;
+    border: none;
+    border-radius: 5px;
+    color: var(--text-color);
+    height: 50px;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+}
+
+button {
+    width: 100%;
+    height: 50px;
+    background-color: var(--button-color);
+    color: var(--button-text-color);
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
