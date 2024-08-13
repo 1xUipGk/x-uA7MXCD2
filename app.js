@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 canvas.width = 720;
-canvas.height = 1280;
+                canvas.height = 1280;
 
                 const background = new Image();
                 background.src = backgroundImage;
@@ -71,59 +71,59 @@ canvas.height = 1280;
 
                         let frameCount = 0;
                         const fps = 24;
+                        let lastTime = 0;
+
                         video.play();
                         video.addEventListener('play', function () {
-                            function drawFrame() {
+                            function drawFrame(currentTime) {
                                 if (video.paused || video.ended) return;
 
-                                // رسم الخلفية أولاً
-                                ctx.drawImage(background, 0, 0, 1080, 1920);
+                                if (currentTime - lastTime >= 1000 / fps) {
+                                    ctx.drawImage(background, 0, 0, 720, 1280);
 
-                               const maxWidth = 600; // بدلاً من 900
-const maxHeight = 920; // بدلاً من 1380
-                                let newWidth = video.videoWidth;
-                                let newHeight = video.videoHeight;
+                                    const maxWidth = 600;
+                                    const maxHeight = 920;
+                                    let newWidth = video.videoWidth;
+                                    let newHeight = video.videoHeight;
 
-                                if (newWidth > maxWidth || newHeight > maxHeight) {
-                                    const widthRatio = maxWidth / newWidth;
-                                    const heightRatio = maxHeight / newHeight;
-                                    const ratio = Math.min(widthRatio, heightRatio);
-                                    newWidth = Math.floor(newWidth * ratio);
-                                    newHeight = Math.floor(newHeight * ratio);
+                                    if (newWidth > maxWidth || newHeight > maxHeight) {
+                                        const widthRatio = maxWidth / newWidth;
+                                        const heightRatio = maxHeight / newHeight;
+                                        const ratio = Math.min(widthRatio, heightRatio);
+                                        newWidth = Math.floor(newWidth * ratio);
+                                        newHeight = Math.floor(newHeight * ratio);
+                                    }
+
+                                    const x_offset = Math.floor((720 - newWidth) / 2);
+                                    const y_offset = Math.floor((1280 - newHeight) / 2);
+
+                                    const videoCanvas = document.createElement('canvas');
+                                    videoCanvas.width = newWidth;
+                                    videoCanvas.height = newHeight;
+                                    const videoCtx = videoCanvas.getContext('2d');
+
+                                    videoCtx.drawImage(video, 0, 0, newWidth, newHeight);
+
+                                    videoCtx.globalCompositeOperation = 'destination-in';
+                                    roundRect(videoCtx, 0, 0, newWidth, newHeight, 42);
+
+                                    ctx.drawImage(videoCanvas, x_offset, y_offset);
+
+                                    const watermarkWidth = 68;
+                                    const watermarkHeight = 33;
+                                    const watermarkX = x_offset + (newWidth - watermarkWidth) / 2;
+                                    const watermarkY = y_offset + newHeight - watermarkHeight - 50;
+                                    ctx.drawImage(watermark, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
+
+                                    frameCount++;
+                                    progressCallback(Math.min((frameCount / (video.duration * fps)) * 100, 100));
+                                    lastTime = currentTime;
                                 }
 
-                                const x_offset = Math.floor((1080 - newWidth) / 2);
-                                const y_offset = Math.floor((1920 - newHeight) / 2);
-
-                                // إنشاء كانفاس مؤقت للفيديو
-                                const videoCanvas = document.createElement('canvas');
-                                videoCanvas.width = newWidth;
-                                videoCanvas.height = newHeight;
-                                const videoCtx = videoCanvas.getContext('2d');
-
-                                // رسم الفيديو على الكانفاس المؤقت
-                                videoCtx.drawImage(video, 0, 0, newWidth, newHeight);
-
-                                // تطبيق الماسك على الفيديو فقط
-                                videoCtx.globalCompositeOperation = 'destination-in';
-                                roundRect(videoCtx, 0, 0, newWidth, newHeight, 42);
-
-                                // رسم الفيديو المعالج على الكانفاس الرئيسي
-                                ctx.drawImage(videoCanvas, x_offset, y_offset);
-
-                                // إضافة العلامة المائية
-                                const watermarkWidth = 102;
-                                const watermarkHeight = 50;
-                                const watermarkX = x_offset + (newWidth - watermarkWidth) / 2;
-                                const watermarkY = y_offset + newHeight - watermarkHeight - 50;
-                                ctx.drawImage(watermark, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
-
-                                frameCount++;
-                                progressCallback(Math.min((frameCount / (video.duration * fps)) * 100, 100));
                                 requestAnimationFrame(drawFrame);
                             }
 
-                            drawFrame();
+                            requestAnimationFrame(drawFrame);
                         });
                     };
                 };
