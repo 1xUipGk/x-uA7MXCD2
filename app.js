@@ -81,37 +81,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 video.onended = () => recorder.stop();
                 recorder.start();
 
-                const fps = 10; // Снижаем частоту кадров
-                const chunkDuration = 1; // Длительность каждого чанка в секундах
-                const totalChunks = Math.ceil(video.duration / chunkDuration);
-                let currentChunk = 0;
+                const fps = video.videoWidth > 720 ? 30 : 60; // Adjust FPS based on video resolution
+                const frameDuration = 1000 / fps;
+                const totalFrames = Math.ceil(video.duration * fps);
+                let currentFrame = 0;
 
-                async function processChunk() {
-                    if (currentChunk >= totalChunks) {
+                async function processFrame() {
+                    if (currentFrame >= totalFrames) {
                         video.pause();
                         recorder.stop();
                         return;
                     }
 
-                    const startTime = currentChunk * chunkDuration;
-                    const endTime = Math.min((currentChunk + 1) * chunkDuration, video.duration);
-                    video.currentTime = startTime;
-
+                    video.currentTime = currentFrame / fps;
                     await new Promise(resolve => {
-                        video.ontimeupdate = () => {
-                            if (video.currentTime >= endTime) {
-                                video.ontimeupdate = null;
-                                resolve();
-                            } else {
-                                drawFrame();
-                            }
+                        video.onseeked = () => {
+                            drawFrame();
+                            resolve();
                         };
-                        video.play();
                     });
 
-                    currentChunk++;
-                    progressCallback((currentChunk / totalChunks) * 100);
-                    setTimeout(processChunk, 100); // Добавляем небольшую задержку между чанками
+                    currentFrame++;
+                    progressCallback((currentFrame / totalFrames) * 100);
+
+                    // Throttle frame processing to reduce load on the device
+                    setTimeout(processFrame, frameDuration * 2); // Process at half the original speed
                 }
 
                 function drawFrame() {
@@ -151,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ctx.drawImage(watermark, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
                 }
 
-                processChunk();
+                processFrame();
             } catch (error) {
                 reject(error);
             }
