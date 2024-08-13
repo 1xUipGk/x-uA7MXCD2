@@ -41,85 +41,90 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function processVideo(videoFile, watermarkPath, progressCallback) {
-        return new Promise((resolve, reject) => {
-            const video = document.createElement('video');
-            video.src = URL.createObjectURL(videoFile);
-            video.onloadedmetadata = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
+    return new Promise((resolve, reject) => {
+        const video = document.createElement('video');
+        video.src = URL.createObjectURL(videoFile);
+        video.onloadedmetadata = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
 
-                const background = new Image();
-                background.src = backgroundImage;
-                background.onload = () => {
-                    canvas.width = 1080;
-                    canvas.height = 1920;
+            const background = new Image();
+            background.src = backgroundImage; // هذا هو reels_background.jpg
+            background.onload = () => {
+                canvas.width = 1080;
+                canvas.height = 1920;
 
-                    const watermark = new Image();
-                    watermark.src = watermarkPath;
-                    watermark.onload = () => {
-                        const stream = canvas.captureStream();
-                        const recorder = new MediaRecorder(stream, { mimeType: 'video/mp4' });
+                const watermark = new Image();
+                watermark.src = watermarkPath;
+                watermark.onload = () => {
+                    const stream = canvas.captureStream();
+                    const recorder = new MediaRecorder(stream, { mimeType: 'video/mp4' });
 
-                        const chunks = [];
-                        recorder.ondataavailable = e => chunks.push(e.data);
-                        recorder.onstop = () => {
-                            const blob = new Blob(chunks, { type: 'video/mp4' });
-                            resolve(blob);
-                        };
+                    const chunks = [];
+                    recorder.ondataavailable = e => chunks.push(e.data);
+                    recorder.onstop = () => {
+                        const blob = new Blob(chunks, { type: 'video/mp4' });
+                        resolve(blob);
+                    };
 
-                        video.onended = () => recorder.stop();
-                        recorder.start();
+                    video.onended = () => recorder.stop();
+                    recorder.start();
 
-                        let frameCount = 0;
-                        const fps = 30;
-                        video.play();
-                        video.addEventListener('play', function () {
-                            function drawFrame() {
-                                if (video.paused || video.ended) return;
+                    let frameCount = 0;
+                    const fps = 30;
+                    video.play();
+                    video.addEventListener('play', function () {
+                        function drawFrame() {
+                            if (video.paused || video.ended) return;
 
-                                const maxWidth = 900;
-                                const maxHeight = 1380;
-                                let newWidth = video.videoWidth;
-                                let newHeight = video.videoHeight;
+                            // رسم صورة الخلفية أولاً
+                            ctx.drawImage(background, 0, 0, 1080, 1920);
 
-                                if (newWidth > maxWidth || newHeight > maxHeight) {
-                                    const widthRatio = maxWidth / newWidth;
-                                    const heightRatio = maxHeight / newHeight;
-                                    const ratio = Math.min(widthRatio, heightRatio);
-                                    newWidth = newWidth * ratio;
-                                    newHeight = newHeight * ratio;
-                                }
+                            const maxWidth = 900;
+                            const maxHeight = 1380;
+                            let newWidth = video.videoWidth;
+                            let newHeight = video.videoHeight;
 
-                                ctx.drawImage(background, 0, 0, 1080, 1920);
-
-                                const xOffset = (1080 - newWidth) / 2;
-                                const yOffset = (1920 - newHeight) / 2;
-
-                                ctx.drawImage(video, xOffset, yOffset, newWidth, newHeight);
-
-                                const borderRadius = 42;
-                                const mask = createRoundedRectangleMask(newWidth, newHeight, borderRadius);
-                                ctx.globalCompositeOperation = 'destination-in';
-                                ctx.drawImage(mask, xOffset, yOffset);
-
-                                const watermarkSize = Math.min(102, 50);
-                                const watermarkX = xOffset + (newWidth - watermarkSize) / 2;
-                                const watermarkY = yOffset + newHeight - watermarkSize - 50;
-                                ctx.globalCompositeOperation = 'source-over';
-                                ctx.drawImage(watermark, watermarkX, watermarkY, watermarkSize, watermarkSize);
-
-                                frameCount++;
-                                progressCallback(Math.min((frameCount / (video.duration * fps)) * 100, 100));
-                                requestAnimationFrame(drawFrame);
+                            if (newWidth > maxWidth || newHeight > maxHeight) {
+                                const widthRatio = maxWidth / newWidth;
+                                const heightRatio = maxHeight / newHeight;
+                                const ratio = Math.min(widthRatio, heightRatio);
+                                newWidth = newWidth * ratio;
+                                newHeight = newHeight * ratio;
                             }
 
-                            drawFrame();
-                        });
-                    };
+                            const xOffset = (1080 - newWidth) / 2;
+                            const yOffset = (1920 - newHeight) / 2;
+
+                            // رسم الفيديو فوق الخلفية
+                            ctx.drawImage(video, xOffset, yOffset, newWidth, newHeight);
+
+                            // تطبيق القناع ذو الزوايا المستديرة
+                            const borderRadius = 42;
+                            const mask = createRoundedRectangleMask(newWidth, newHeight, borderRadius);
+                            ctx.globalCompositeOperation = 'destination-in';
+                            ctx.drawImage(mask, xOffset, yOffset);
+                            ctx.globalCompositeOperation = 'source-over';
+
+                            // إضافة العلامة المائية
+                            const watermarkWidth = 102;
+                            const watermarkHeight = 50;
+                            const watermarkX = xOffset + (newWidth - watermarkWidth) / 2;
+                            const watermarkY = yOffset + newHeight - watermarkHeight - 50;
+                            ctx.drawImage(watermark, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
+
+                            frameCount++;
+                            progressCallback(Math.min((frameCount / (video.duration * fps)) * 100, 100));
+                            requestAnimationFrame(drawFrame);
+                        }
+
+                        drawFrame();
+                    });
                 };
             };
-        });
-    }
+        };
+    });
+}
 
     function createRoundedRectangleMask(width, height, radius) {
         const maskCanvas = document.createElement('canvas');
