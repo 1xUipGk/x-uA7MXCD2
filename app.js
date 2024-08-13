@@ -79,8 +79,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (video.paused || video.ended) return;
 
                                 if (currentTime - lastTime >= 1000 / fps) {
-                                    ctx.drawImage(background, 0, 0, 720, 1280);
+                                    // توسيط الخلفية داخل الكانفاس
+                                    const backgroundWidth = canvas.width;
+                                    const backgroundHeight = canvas.height;
+                                    const backgroundX = 0;
+                                    const backgroundY = 0;
 
+                                    ctx.drawImage(background, backgroundX, backgroundY, backgroundWidth, backgroundHeight);
+
+                                    // حساب أبعاد الفيديو بما يتناسب مع الكانفاس
                                     const maxWidth = 600;
                                     const maxHeight = 920;
                                     let newWidth = video.videoWidth;
@@ -94,8 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                         newHeight = Math.floor(newHeight * ratio);
                                     }
 
-                                    const x_offset = Math.floor((720 - newWidth) / 2);
-                                    const y_offset = Math.floor((1280 - newHeight) / 2);
+                                    const x_offset = Math.floor((canvas.width - newWidth) / 2);
+                                    const y_offset = Math.floor((canvas.height - newHeight) / 2);
 
                                     const videoCanvas = document.createElement('canvas');
                                     videoCanvas.width = newWidth;
@@ -109,6 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                                     ctx.drawImage(videoCanvas, x_offset, y_offset);
 
+                                    // حساب موقع العلامة المائية وتوسيطها
                                     const watermarkWidth = 68;
                                     const watermarkHeight = 33;
                                     const watermarkX = x_offset + (newWidth - watermarkWidth) / 2;
