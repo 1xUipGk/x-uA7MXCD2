@@ -47,8 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
             video.onloadedmetadata = () => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                canvas.width = 1080;
-                canvas.height = 1920;
+                canvas.width = 720;
+canvas.height = 1280;
 
                 const background = new Image();
                 background.src = backgroundImage;
@@ -79,8 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 // رسم الخلفية أولاً
                                 ctx.drawImage(background, 0, 0, 1080, 1920);
 
-                                const maxWidth = 900;
-                                const maxHeight = 1380;
+                               const maxWidth = 600; // بدلاً من 900
+const maxHeight = 920; // بدلاً من 1380
                                 let newWidth = video.videoWidth;
                                 let newHeight = video.videoHeight;
 
