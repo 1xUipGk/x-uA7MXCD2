@@ -83,3 +83,12 @@ button {
     cursor: pointer;
     transition: all 0.3s ease;
 }
+
+.navbar {
+    padding: 10px 0;
+    text-align: center;
+}
+img.logo {
+    padding: 0.5rem;
+    height: 30px;
+}
