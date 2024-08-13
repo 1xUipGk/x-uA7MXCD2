@@ -112,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     videoCtx.drawImage(video, 0, 0, newWidth, newHeight);
 
                                     videoCtx.globalCompositeOperation = 'destination-in';
-                                    roundRect(videoCtx, 0, 0, newWidth, newHeight, 42);
+                                    roundRect(videoCtx, 0, 0, newWidth, newHeight, 21);
 
                                     ctx.drawImage(videoCanvas, x_offset, y_offset);
 
