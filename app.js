@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const processBtn = document.getElementById('process-btn');
     const progressBar = document.getElementById('progress-bar');
     const preview = document.getElementById('preview');
-    const backgroundImage = 'reels_background.jpg'; // صورة الخلفية
+    const backgroundImage = 'reels_background.jpg';
 
     processBtn.addEventListener('click', async () => {
         if (!inputVideo.files.length) {
@@ -28,10 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
             preview.src = videoUrl;
             preview.style.display = 'block';
 
-            // تحميل الفيديو المعالج
             const a = document.createElement('a');
             a.href = videoUrl;
-            a.download = outputVideo.value || 'processed_video.mp4'; // تغيير الصيغة إلى mp4
+            a.download = outputVideo.value || 'processed_video.mp4';
             a.click();
         } catch (error) {
             console.error('Error processing video:', error);
@@ -52,16 +51,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const background = new Image();
                 background.src = backgroundImage;
                 background.onload = () => {
-                    const bgWidth = background.width;
-                    const bgHeight = background.height;
-                    canvas.width = bgWidth;
-                    canvas.height = bgHeight;
+                    canvas.width = 1080;
+                    canvas.height = 1920;
 
                     const watermark = new Image();
                     watermark.src = watermarkPath;
                     watermark.onload = () => {
                         const stream = canvas.captureStream();
-                        const recorder = new MediaRecorder(stream, { mimeType: 'video/mp4' }); // تغيير MIME type إلى mp4
+                        const recorder = new MediaRecorder(stream, { mimeType: 'video/mp4' });
 
                         const chunks = [];
                         recorder.ondataavailable = e => chunks.push(e.data);
@@ -74,13 +71,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         recorder.start();
 
                         let frameCount = 0;
-                        const fps = 30; // تقدير 30 إطار في الثانية
+                        const fps = 30;
                         video.play();
                         video.addEventListener('play', function () {
                             function drawFrame() {
                                 if (video.paused || video.ended) return;
 
-                                // تحديد حجم الفيديو الجديد بناءً على الأبعاد القصوى
                                 const maxWidth = 900;
                                 const maxHeight = 1380;
                                 let newWidth = video.videoWidth;
@@ -94,26 +90,21 @@ document.addEventListener('DOMContentLoaded', () => {
                                     newHeight = newHeight * ratio;
                                 }
 
-                                canvas.width = bgWidth;
-                                canvas.height = bgHeight;
-                                ctx.drawImage(background, 0, 0, bgWidth, bgHeight);
+                                ctx.drawImage(background, 0, 0, 1080, 1920);
 
-                                // ضبط موقع الفيديو داخل الخلفية
-                                const xOffset = (bgWidth - newWidth) / 2;
-                                const yOffset = (bgHeight - newHeight) / 2;
+                                const xOffset = (1080 - newWidth) / 2;
+                                const yOffset = (1920 - newHeight) / 2;
 
                                 ctx.drawImage(video, xOffset, yOffset, newWidth, newHeight);
 
-                                // تطبيق قناع مستطيل بزوايا دائرية
                                 const borderRadius = 42;
                                 const mask = createRoundedRectangleMask(newWidth, newHeight, borderRadius);
                                 ctx.globalCompositeOperation = 'destination-in';
                                 ctx.drawImage(mask, xOffset, yOffset);
 
-                                // إضافة العلامة المائية
-                                const watermarkSize = Math.min(newWidth, newHeight) * 0.2;
+                                const watermarkSize = Math.min(102, 50);
                                 const watermarkX = xOffset + (newWidth - watermarkSize) / 2;
-                                const watermarkY = yOffset + newHeight - watermarkSize - 10;
+                                const watermarkY = yOffset + newHeight - watermarkSize - 50;
                                 ctx.globalCompositeOperation = 'source-over';
                                 ctx.drawImage(watermark, watermarkX, watermarkY, watermarkSize, watermarkSize);
 
