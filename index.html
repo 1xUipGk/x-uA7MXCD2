@@ -3,21 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>معالج الفيديو</title>
+    <title>Bahrani Games</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="logo.png">
 </head>
 <body>
+    <nav class="navbar">
+        <img src="Asset1.png" class="logo" alt="Bahrani Games Logo">
+    </nav>
     <div class="container">
-        <h1>معالج الفيديو</h1>
         <input type="file" id="input-video" accept="video/*">
-        <input type="text" id="output-video" placeholder="اسم ملف الفيديو الناتج">
         <select id="watermark-select">
             <option value="Asset4.png">White</option>
             <option value="Asset3.png">Black</option>
             <option value="Asset2.png">Black Colored</option>
             <option value="Asset1.png">Colored</option>
         </select>
-        <button id="process-btn">بدء المعالجة</button>
+        <button id="process-btn">Start processing</button>
         <progress id="progress-bar" value="0" max="100"></progress>
         <video id="preview" controls style="display: none;"></video>
     </div>
