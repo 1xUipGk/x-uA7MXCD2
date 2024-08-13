@@ -81,62 +81,77 @@ document.addEventListener('DOMContentLoaded', () => {
                 video.onended = () => recorder.stop();
                 recorder.start();
 
-                let frameCount = 0;
-                const fps = 30;
-                const totalFrames = video.duration * fps;
-                const isLowEndDevice = navigator.hardwareConcurrency <= 4;
-                const frameInterval = isLowEndDevice ? 2 : 1; // Уменьшаем частоту кадров для слабых устройств
+                const fps = 10; // Снижаем частоту кадров
+                const chunkDuration = 1; // Длительность каждого чанка в секундах
+                const totalChunks = Math.ceil(video.duration / chunkDuration);
+                let currentChunk = 0;
 
-                video.play();
-                video.addEventListener('play', function () {
-                    async function drawFrame() {
-                        if (video.paused || video.ended) return;
-
-                        if (frameCount % frameInterval === 0) {
-                            ctx.drawImage(background, 0, 0, 1080, 1920);
-
-                            const maxWidth = 900;
-                            const maxHeight = 1380;
-                            let newWidth = video.videoWidth;
-                            let newHeight = video.videoHeight;
-
-                            if (newWidth > maxWidth || newHeight > maxHeight) {
-                                const widthRatio = maxWidth / newWidth;
-                                const heightRatio = maxHeight / newHeight;
-                                const ratio = Math.min(widthRatio, heightRatio);
-                                newWidth = Math.floor(newWidth * ratio);
-                                newHeight = Math.floor(newHeight * ratio);
-                            }
-
-                            const x_offset = Math.floor((1080 - newWidth) / 2);
-                            const y_offset = Math.floor((1920 - newHeight) / 2);
-
-                            const videoCanvas = document.createElement('canvas');
-                            videoCanvas.width = newWidth;
-                            videoCanvas.height = newHeight;
-                            const videoCtx = videoCanvas.getContext('2d');
-
-                            videoCtx.drawImage(video, 0, 0, newWidth, newHeight);
-                            videoCtx.globalCompositeOperation = 'destination-in';
-                            roundRect(videoCtx, 0, 0, newWidth, newHeight, 42);
-
-                            ctx.drawImage(videoCanvas, x_offset, y_offset);
-
-                            const watermarkWidth = 102;
-                            const watermarkHeight = 50;
-                            const watermarkX = x_offset + (newWidth - watermarkWidth) / 2;
-                            const watermarkY = y_offset + newHeight - watermarkHeight - 50;
-                            ctx.drawImage(watermark, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
-
-                            progressCallback(Math.min((frameCount / totalFrames) * 100, 100));
-                        }
-
-                        frameCount++;
-                        requestAnimationFrame(drawFrame);
+                async function processChunk() {
+                    if (currentChunk >= totalChunks) {
+                        video.pause();
+                        recorder.stop();
+                        return;
                     }
 
-                    drawFrame();
-                });
+                    const startTime = currentChunk * chunkDuration;
+                    const endTime = Math.min((currentChunk + 1) * chunkDuration, video.duration);
+                    video.currentTime = startTime;
+
+                    await new Promise(resolve => {
+                        video.ontimeupdate = () => {
+                            if (video.currentTime >= endTime) {
+                                video.ontimeupdate = null;
+                                resolve();
+                            } else {
+                                drawFrame();
+                            }
+                        };
+                        video.play();
+                    });
+
+                    currentChunk++;
+                    progressCallback((currentChunk / totalChunks) * 100);
+                    setTimeout(processChunk, 100); // Добавляем небольшую задержку между чанками
+                }
+
+                function drawFrame() {
+                    ctx.drawImage(background, 0, 0, 1080, 1920);
+
+                    const maxWidth = 900;
+                    const maxHeight = 1380;
+                    let newWidth = video.videoWidth;
+                    let newHeight = video.videoHeight;
+
+                    if (newWidth > maxWidth || newHeight > maxHeight) {
+                        const widthRatio = maxWidth / newWidth;
+                        const heightRatio = maxHeight / newHeight;
+                        const ratio = Math.min(widthRatio, heightRatio);
+                        newWidth = Math.floor(newWidth * ratio);
+                        newHeight = Math.floor(newHeight * ratio);
+                    }
+
+                    const x_offset = Math.floor((1080 - newWidth) / 2);
+                    const y_offset = Math.floor((1920 - newHeight) / 2);
+
+                    const videoCanvas = document.createElement('canvas');
+                    videoCanvas.width = newWidth;
+                    videoCanvas.height = newHeight;
+                    const videoCtx = videoCanvas.getContext('2d');
+
+                    videoCtx.drawImage(video, 0, 0, newWidth, newHeight);
+                    videoCtx.globalCompositeOperation = 'destination-in';
+                    roundRect(videoCtx, 0, 0, newWidth, newHeight, 42);
+
+                    ctx.drawImage(videoCanvas, x_offset, y_offset);
+
+                    const watermarkWidth = 102;
+                    const watermarkHeight = 50;
+                    const watermarkX = x_offset + (newWidth - watermarkWidth) / 2;
+                    const watermarkY = y_offset + newHeight - watermarkHeight - 50;
+                    ctx.drawImage(watermark, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
+                }
+
+                processChunk();
             } catch (error) {
                 reject(error);
             }
