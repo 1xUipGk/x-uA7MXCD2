@@ -1,13 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
     const inputVideo = document.getElementById('input-video');
-    const outputVideo = document.getElementById('output-video');
     const watermarkSelect = document.getElementById('watermark-select');
     const processBtn = document.getElementById('process-btn');
     const progressBar = document.getElementById('progress-bar');
     const preview = document.getElementById('preview');
     const backgroundImage = 'reels_background.jpg';
 
+    let isProcessing = false;
+
     processBtn.addEventListener('click', async () => {
+        if (isProcessing) return;
         if (!inputVideo.files.length) {
             alert('الرجاء اختيار فيديو أولاً');
             return;
@@ -18,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         processBtn.disabled = true;
         progressBar.value = 0;
+        isProcessing = true;
 
         try {
             const processedVideoBlob = await processVideo(file, watermark, (progress) => {
@@ -30,104 +33,113 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const a = document.createElement('a');
             a.href = videoUrl;
-            a.download = outputVideo.value || 'processed_video.webm';
+            a.download = 'processed_video.webm';
             a.click();
         } catch (error) {
             console.error('Error processing video:', error);
             alert('حدث خطأ أثناء معالجة الفيديو');
         } finally {
             processBtn.disabled = false;
+            isProcessing = false;
         }
     });
 
-    async function processVideo(videoFile, watermarkPath, progressCallback) {
+    async function loadImage(src) {
         return new Promise((resolve, reject) => {
-            const video = document.createElement('video');
-            video.src = URL.createObjectURL(videoFile);
-            video.onloadedmetadata = () => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+        });
+    }
+
+    async function processVideo(videoFile, watermarkPath, progressCallback) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const video = document.createElement('video');
+                video.src = URL.createObjectURL(videoFile);
+                await new Promise(resolve => video.onloadedmetadata = resolve);
+
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 canvas.width = 1080;
                 canvas.height = 1920;
 
-                const background = new Image();
-                background.src = backgroundImage;
-                background.onload = () => {
-                    const watermark = new Image();
-                    watermark.src = watermarkPath;
-                    watermark.onload = () => {
-                        const stream = canvas.captureStream();
-                        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
+                const background = await loadImage(backgroundImage);
+                const watermark = await loadImage(watermarkPath);
 
-                        const chunks = [];
-                        recorder.ondataavailable = e => chunks.push(e.data);
-                        recorder.onstop = () => {
-                            const blob = new Blob(chunks, { type: 'video/webm' });
-                            resolve(blob);
-                        };
+                const stream = canvas.captureStream();
+                const recorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
 
-                        video.onended = () => recorder.stop();
-                        recorder.start();
+                const chunks = [];
+                recorder.ondataavailable = e => chunks.push(e.data);
+                recorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: 'video/webm' });
+                    resolve(blob);
+                };
 
-                        let frameCount = 0;
-                        const fps = 30;
-                        video.play();
-                        video.addEventListener('play', function () {
-                            function drawFrame() {
-                                if (video.paused || video.ended) return;
+                video.onended = () => recorder.stop();
+                recorder.start();
 
-                                // رسم الخلفية أولاً
-                                ctx.drawImage(background, 0, 0, 1080, 1920);
+                let frameCount = 0;
+                const fps = 30;
+                const totalFrames = video.duration * fps;
+                const isLowEndDevice = navigator.hardwareConcurrency <= 4;
+                const frameInterval = isLowEndDevice ? 2 : 1; // Уменьшаем частоту кадров для слабых устройств
 
-                                const maxWidth = 900;
-                                const maxHeight = 1380;
-                                let newWidth = video.videoWidth;
-                                let newHeight = video.videoHeight;
+                video.play();
+                video.addEventListener('play', function () {
+                    async function drawFrame() {
+                        if (video.paused || video.ended) return;
 
-                                if (newWidth > maxWidth || newHeight > maxHeight) {
-                                    const widthRatio = maxWidth / newWidth;
-                                    const heightRatio = maxHeight / newHeight;
-                                    const ratio = Math.min(widthRatio, heightRatio);
-                                    newWidth = Math.floor(newWidth * ratio);
-                                    newHeight = Math.floor(newHeight * ratio);
-                                }
+                        if (frameCount % frameInterval === 0) {
+                            ctx.drawImage(background, 0, 0, 1080, 1920);
 
-                                const x_offset = Math.floor((1080 - newWidth) / 2);
-                                const y_offset = Math.floor((1920 - newHeight) / 2);
+                            const maxWidth = 900;
+                            const maxHeight = 1380;
+                            let newWidth = video.videoWidth;
+                            let newHeight = video.videoHeight;
 
-                                // إنشاء كانفاس مؤقت للفيديو
-                                const videoCanvas = document.createElement('canvas');
-                                videoCanvas.width = newWidth;
-                                videoCanvas.height = newHeight;
-                                const videoCtx = videoCanvas.getContext('2d');
-
-                                // رسم الفيديو على الكانفاس المؤقت
-                                videoCtx.drawImage(video, 0, 0, newWidth, newHeight);
-
-                                // تطبيق الماسك على الفيديو فقط
-                                videoCtx.globalCompositeOperation = 'destination-in';
-                                roundRect(videoCtx, 0, 0, newWidth, newHeight, 42);
-
-                                // رسم الفيديو المعالج على الكانفاس الرئيسي
-                                ctx.drawImage(videoCanvas, x_offset, y_offset);
-
-                                // إضافة العلامة المائية
-                                const watermarkWidth = 102;
-                                const watermarkHeight = 50;
-                                const watermarkX = x_offset + (newWidth - watermarkWidth) / 2;
-                                const watermarkY = y_offset + newHeight - watermarkHeight - 50;
-                                ctx.drawImage(watermark, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
-
-                                frameCount++;
-                                progressCallback(Math.min((frameCount / (video.duration * fps)) * 100, 100));
-                                requestAnimationFrame(drawFrame);
+                            if (newWidth > maxWidth || newHeight > maxHeight) {
+                                const widthRatio = maxWidth / newWidth;
+                                const heightRatio = maxHeight / newHeight;
+                                const ratio = Math.min(widthRatio, heightRatio);
+                                newWidth = Math.floor(newWidth * ratio);
+                                newHeight = Math.floor(newHeight * ratio);
                             }
 
-                            drawFrame();
-                        });
-                    };
-                };
-            };
+                            const x_offset = Math.floor((1080 - newWidth) / 2);
+                            const y_offset = Math.floor((1920 - newHeight) / 2);
+
+                            const videoCanvas = document.createElement('canvas');
+                            videoCanvas.width = newWidth;
+                            videoCanvas.height = newHeight;
+                            const videoCtx = videoCanvas.getContext('2d');
+
+                            videoCtx.drawImage(video, 0, 0, newWidth, newHeight);
+                            videoCtx.globalCompositeOperation = 'destination-in';
+                            roundRect(videoCtx, 0, 0, newWidth, newHeight, 42);
+
+                            ctx.drawImage(videoCanvas, x_offset, y_offset);
+
+                            const watermarkWidth = 102;
+                            const watermarkHeight = 50;
+                            const watermarkX = x_offset + (newWidth - watermarkWidth) / 2;
+                            const watermarkY = y_offset + newHeight - watermarkHeight - 50;
+                            ctx.drawImage(watermark, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
+
+                            progressCallback(Math.min((frameCount / totalFrames) * 100, 100));
+                        }
+
+                        frameCount++;
+                        requestAnimationFrame(drawFrame);
+                    }
+
+                    drawFrame();
+                });
+            } catch (error) {
+                reject(error);
+            }
         });
     }
 
