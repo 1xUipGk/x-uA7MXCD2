@@ -92,3 +92,11 @@ img.logo {
     padding: 0.5rem;
     height: 30px;
 }
+
+
+video#preview {
+    margin: 15px 0;
+    border: 2px var(--border-color) dashed;
+    border-radius: 10px;
+    height: auto;
+}
