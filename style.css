@@ -93,7 +93,18 @@ img.logo {
     height: 30px;
 }
 
-
+input#textBox {
+    width: 100%;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #1c2327;
+    border: none;
+    border-radius: 5px;
+    color: var(--text-color);
+    height: 50px;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+}
 video#preview {
     margin: 15px 0;
     border: 2px var(--border-color) dashed;
