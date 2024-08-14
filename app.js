@@ -111,19 +111,20 @@ document.addEventListener('DOMContentLoaded', () => {
                             ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
                             // Calculate video dimensions
-                            const maxWidth = 600;
-                            const maxHeight = 920;
-                            let newWidth = video.videoWidth;
-                            let newHeight = video.videoHeight;
+                             const maxWidth = 600;
+    const maxHeight = 920;
+    let newWidth = video.videoWidth;
+    let newHeight = video.videoHeight;
 
-                            if (newWidth > maxWidth || newHeight > maxHeight) {
-                                const ratio = Math.min(maxWidth / newWidth, maxHeight / newHeight);
-                                newWidth = Math.floor(newWidth * ratio);
-                                newHeight = Math.floor(newHeight * ratio);
-                            }
+    if (newWidth > maxWidth || newHeight > maxHeight) {
+        const ratio = Math.min(maxWidth / newWidth, maxHeight / newHeight);
+        newWidth = Math.floor(newWidth * ratio);
+        newHeight = Math.floor(newHeight * ratio);
+    }
 
-                            const x_offset = Math.floor((canvas.width - newWidth) / 2);
-                            const y_offset = Math.floor((canvas.height - newHeight) / 2);
+    const x_offset = Math.floor((canvas.width - newWidth) / 2);
+    const y_offset = Math.floor((canvas.height - newHeight) / 2);
+
 
                             // Draw video frame
                             ctx.save();
@@ -141,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             ctx.drawImage(watermark, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
 
                             // Draw texts
-                            drawTexts(ctx, whiteText, greenText, canvas.width, y_offset);
+                            drawTexts(ctx, whiteText, greenText, canvas.width, y_offset, newHeight);
 
                             frameCount++;
                             progressCallback(Math.min((frameCount / totalFrames) * 100, 100));
@@ -169,27 +170,33 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.quadraticCurveTo(x, y, x + radius, y);
         ctx.closePath();
     }
+    
+function drawTexts(ctx, whiteText, greenText, canvasWidth, y_offset, videoHeight) {
+    const padding_x = 20;
+    const text_box_width = canvasWidth - (padding_x * 2);
+    const lineHeight = 63.6;
+    const textPadding = 25; // مسافة إضافية فوق الفيديو
 
-    function drawTexts(ctx, whiteText, greenText, canvasWidth, y_offset) {
-        const padding_x = 20;
-        const text_box_width = canvasWidth - (padding_x * 2);
-        const lineHeight = 63.6;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
 
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'top';
+    // حساب موضع النص الأخضر
+    const greenTextY = y_offset - textPadding - lineHeight * 2; // نضع النص الأخضر فوق النص الأبيض
 
-        // Draw green text
-        ctx.fillStyle = '#6ef13e';
-        ctx.font = '45px LamaRounded';
-        const greenTextY = y_offset + 20;
-        wrapText(ctx, greenText, canvasWidth - padding_x, greenTextY, text_box_width, lineHeight);
+    // رسم النص الأخضر
+    ctx.fillStyle = '#6ef13e';
+    ctx.font = '45px LamaRounded';
+    wrapText(ctx, greenText, canvasWidth - padding_x, greenTextY, text_box_width, lineHeight);
 
-        // Draw white text
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '45px LamaRounded';
-        const whiteTextY = greenTextY + (lineHeight * 2); // Adjust this value as needed
-        wrapText(ctx, whiteText, canvasWidth - padding_x, whiteTextY, text_box_width, lineHeight);
-    }
+    // حساب موضع النص الأبيض
+    const whiteTextY = y_offset - textPadding - lineHeight; // نضع النص الأبيض مباشرة فوق الفيديو
+
+    // رسم النص الأبيض
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '45px LamaRounded';
+    wrapText(ctx, whiteText, canvasWidth - padding_x, whiteTextY, text_box_width, lineHeight);
+}
+
 
     function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
         const words = text.split(' ');
