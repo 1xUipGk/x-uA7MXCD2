@@ -1,11 +1,19 @@
 document.addEventListener('DOMContentLoaded', () => {
     const inputVideo = document.getElementById('input-video');
     const watermarkSelect = document.getElementById('watermark-select');
+    const textBox = document.getElementById('textBox');
+    const additionalTextBox = document.getElementById('additionalTextBox');
     const processBtn = document.getElementById('process-btn');
     const progressBar = document.getElementById('progress-bar');
     const preview = document.getElementById('preview');
     const downloadBtn = document.getElementById('download-btn');
     const backgroundImage = 'reels_background.jpg';
+
+    // Load custom font
+    const font = new FontFace('LamaRounded', 'url(LamaRounded-SemiBold.ttf)');
+    font.load().then(font => {
+        document.fonts.add(font);
+    });
 
     processBtn.addEventListener('click', async () => {
         if (!inputVideo.files.length) {
@@ -15,6 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const file = inputVideo.files[0];
         const watermark = watermarkSelect.value;
+        const whiteText = textBox.value;
+        const greenText = additionalTextBox.value;
 
         processBtn.disabled = true;
         progressBar.value = 0;
@@ -22,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadBtn.style.display = 'none';
 
         try {
-            const processedVideoBlob = await processVideo(file, watermark, (progress) => {
+            const processedVideoBlob = await processVideo(file, watermark, whiteText, greenText, (progress) => {
                 progressBar.value = progress;
             });
 
@@ -47,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    async function processVideo(videoFile, watermarkPath, progressCallback) {
+    async function processVideo(videoFile, watermarkPath, whiteText, greenText, progressCallback) {
         return new Promise((resolve, reject) => {
             const video = document.createElement('video');
             video.src = URL.createObjectURL(videoFile);
@@ -130,6 +140,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             const watermarkY = y_offset + newHeight - watermarkHeight - 50;
                             ctx.drawImage(watermark, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
 
+                            // Draw texts
+                            drawTexts(ctx, whiteText, greenText, canvas.width, y_offset);
+
                             frameCount++;
                             progressCallback(Math.min((frameCount / totalFrames) * 100, 100));
 
@@ -155,5 +168,45 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.lineTo(x, y + radius);
         ctx.quadraticCurveTo(x, y, x + radius, y);
         ctx.closePath();
+    }
+
+    function drawTexts(ctx, whiteText, greenText, canvasWidth, y_offset) {
+        const padding_x = 20;
+        const text_box_width = canvasWidth - (padding_x * 2);
+        const lineHeight = 63.6;
+
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
+
+        // Draw green text
+        ctx.fillStyle = '#6ef13e';
+        ctx.font = '45px LamaRounded';
+        const greenTextY = y_offset + 20;
+        wrapText(ctx, greenText, canvasWidth - padding_x, greenTextY, text_box_width, lineHeight);
+
+        // Draw white text
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '45px LamaRounded';
+        const whiteTextY = greenTextY + (lineHeight * 2); // Adjust this value as needed
+        wrapText(ctx, whiteText, canvasWidth - padding_x, whiteTextY, text_box_width, lineHeight);
+    }
+
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+        const words = text.split(' ');
+        let line = '';
+
+        for (let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            const metrics = ctx.measureText(testLine);
+            const testWidth = metrics.width;
+            if (testWidth > maxWidth && n > 0) {
+                ctx.fillText(line, x, y);
+                line = words[n] + ' ';
+                y += lineHeight;
+            } else {
+                line = testLine;
+            }
+        }
+        ctx.fillText(line, x, y);
     }
 });
