@@ -1,10 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     const inputVideo = document.getElementById('input-video');
-    const outputVideo = document.getElementById('output-video');
     const watermarkSelect = document.getElementById('watermark-select');
     const processBtn = document.getElementById('process-btn');
     const progressBar = document.getElementById('progress-bar');
     const preview = document.getElementById('preview');
+    const downloadBtn = document.getElementById('download-btn');
     const backgroundImage = 'reels_background.jpg';
 
     processBtn.addEventListener('click', async () => {
@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         processBtn.disabled = true;
         progressBar.value = 0;
+        preview.style.display = 'none';
+        downloadBtn.style.display = 'none';
 
         try {
             const processedVideoBlob = await processVideo(file, watermark, (progress) => {
@@ -28,14 +30,14 @@ document.addEventListener('DOMContentLoaded', () => {
             preview.src = videoUrl;
             preview.style.display = 'block';
 
-            // Show download button
-            const downloadBtn = document.getElementById('download-btn');
             downloadBtn.style.display = 'block';
             downloadBtn.onclick = () => {
                 const a = document.createElement('a');
                 a.href = videoUrl;
-                a.download = outputVideo.value || 'processed_video.webm';
+                a.download = 'processed_video.webm';
+                document.body.appendChild(a);
                 a.click();
+                document.body.removeChild(a);
             };
         } catch (error) {
             console.error('Error processing video:', error);
@@ -61,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const watermark = new Image();
                     watermark.src = watermarkPath;
                     watermark.onload = () => {
-                        const stream = canvas.captureStream();
+                        const stream = canvas.captureStream(30); // 30 FPS for better quality
                         const audioContext = new AudioContext();
                         const audioSource = audioContext.createMediaElementSource(video);
                         const audioDestination = audioContext.createMediaStreamDestination();
@@ -72,7 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             ...audioDestination.stream.getAudioTracks()
                         ]);
 
-                        const recorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm; codecs=vp9,opus' });
+                        const recorder = new MediaRecorder(combinedStream, { 
+                            mimeType: 'video/webm; codecs=vp9,opus',
+                            videoBitsPerSecond: 2500000 // 2.5 Mbps for better quality
+                        });
 
                         const chunks = [];
                         recorder.ondataavailable = e => chunks.push(e.data);
@@ -85,63 +90,48 @@ document.addEventListener('DOMContentLoaded', () => {
                         recorder.start();
 
                         let frameCount = 0;
-                        const fps = 24;
-                        let lastTime = 0;
+                        const totalFrames = video.duration * 30; // 30 FPS
 
                         video.play();
                         
-                        function drawFrame(currentTime) {
+                        function drawFrame() {
                             if (video.paused || video.ended) return;
 
-                            if (currentTime - lastTime >= 1000 / fps) {
-                                // توسيط الخلفية داخل الكانفاس
-                                const backgroundWidth = canvas.width;
-                                const backgroundHeight = canvas.height;
-                                const backgroundX = 0;
-                                const backgroundY = 0;
+                            // Draw background
+                            ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
-                                ctx.drawImage(background, backgroundX, backgroundY, backgroundWidth, backgroundHeight);
+                            // Calculate video dimensions
+                            const maxWidth = 600;
+                            const maxHeight = 920;
+                            let newWidth = video.videoWidth;
+                            let newHeight = video.videoHeight;
 
-                                // حساب أبعاد الفيديو بما يتناسب مع الكانفاس
-                                const maxWidth = 600;
-                                const maxHeight = 920;
-                                let newWidth = video.videoWidth;
-                                let newHeight = video.videoHeight;
-
-                                if (newWidth > maxWidth || newHeight > maxHeight) {
-                                    const widthRatio = maxWidth / newWidth;
-                                    const heightRatio = maxHeight / newHeight;
-                                    const ratio = Math.min(widthRatio, heightRatio);
-                                    newWidth = Math.floor(newWidth * ratio);
-                                    newHeight = Math.floor(newHeight * ratio);
-                                }
-
-                                const x_offset = Math.floor((canvas.width - newWidth) / 2);
-                                const y_offset = Math.floor((canvas.height - newHeight) / 2);
-
-                                const videoCanvas = document.createElement('canvas');
-                                videoCanvas.width = newWidth;
-                                videoCanvas.height = newHeight;
-                                const videoCtx = videoCanvas.getContext('2d');
-
-                                videoCtx.drawImage(video, 0, 0, newWidth, newHeight);
-
-                                videoCtx.globalCompositeOperation = 'destination-in';
-                                roundRect(videoCtx, 0, 0, newWidth, newHeight, 21);
-
-                                ctx.drawImage(videoCanvas, x_offset, y_offset);
-
-                                // حساب موقع العلامة المائية وتوسيطها
-                                const watermarkWidth = 68;
-                                const watermarkHeight = 33;
-                                const watermarkX = x_offset + (newWidth - watermarkWidth) / 2;
-                                const watermarkY = y_offset + newHeight - watermarkHeight - 50;
-                                ctx.drawImage(watermark, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
-
-                                frameCount++;
-                                progressCallback(Math.min((frameCount / (video.duration * fps)) * 100, 100));
-                                lastTime = currentTime;
+                            if (newWidth > maxWidth || newHeight > maxHeight) {
+                                const ratio = Math.min(maxWidth / newWidth, maxHeight / newHeight);
+                                newWidth = Math.floor(newWidth * ratio);
+                                newHeight = Math.floor(newHeight * ratio);
                             }
+
+                            const x_offset = Math.floor((canvas.width - newWidth) / 2);
+                            const y_offset = Math.floor((canvas.height - newHeight) / 2);
+
+                            // Draw video frame
+                            ctx.save();
+                            ctx.beginPath();
+                            roundRect(ctx, x_offset, y_offset, newWidth, newHeight, 21);
+                            ctx.clip();
+                            ctx.drawImage(video, x_offset, y_offset, newWidth, newHeight);
+                            ctx.restore();
+
+                            // Draw watermark
+                            const watermarkWidth = 68;
+                            const watermarkHeight = 33;
+                            const watermarkX = x_offset + (newWidth - watermarkWidth) / 2;
+                            const watermarkY = y_offset + newHeight - watermarkHeight - 50;
+                            ctx.drawImage(watermark, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
+
+                            frameCount++;
+                            progressCallback(Math.min((frameCount / totalFrames) * 100, 100));
 
                             requestAnimationFrame(drawFrame);
                         }
@@ -165,6 +155,5 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.lineTo(x, y + radius);
         ctx.quadraticCurveTo(x, y, x + radius, y);
         ctx.closePath();
-        ctx.fill();
     }
 });
