@@ -3,7 +3,6 @@ document.addEventListener('DOMContentLoaded', () => {
         inputVideo: document.getElementById('input-video'),
         watermarkSelect: document.getElementById('watermark-select'),
         textBox: document.getElementById('textBox'),
-        additionalTextBox: document.getElementById('additionalTextBox'),
         processBtn: document.getElementById('process-btn'),
         progressBar: document.getElementById('progress-bar'),
         preview: document.getElementById('preview'),
@@ -36,12 +35,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const file = elements.inputVideo.files[0];
         const watermark = elements.watermarkSelect.value;
         const whiteText = elements.textBox.value;
-        const greenText = elements.additionalTextBox.value;
 
         setUIState('processing');
 
         try {
-            const processedVideoBlob = await processVideo(file, watermark, whiteText, greenText, updateProgress);
+            const processedVideoBlob = await processVideo(file, watermark, whiteText, updateProgress);
             displayProcessedVideo(processedVideoBlob);
         } catch (error) {
             console.error('خطأ في معالجة الفيديو:', error);
@@ -80,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.removeChild(a);
     }
 
-    async function processVideo(videoFile, watermarkPath, whiteText, greenText, progressCallback) {
+    async function processVideo(videoFile, watermarkPath, whiteText, progressCallback) {
         return new Promise((resolve, reject) => {
             const video = document.createElement('video');
             video.src = URL.createObjectURL(videoFile);
@@ -164,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             ctx.drawImage(watermark, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
 
                             // Draw texts
-                            drawTexts(ctx, whiteText, greenText, canvas.width, y_offset, newHeight);
+                            drawTexts(ctx, whiteText, canvas.width, y_offset, newHeight);
 
                             frameCount++;
                             progressCallback(Math.min((frameCount / totalFrames) * 100, 100));
@@ -193,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.closePath();
     }
     
-    function drawTexts(ctx, whiteText, greenText, canvasWidth, y_offset, videoHeight) {
+    function drawTexts(ctx, whiteText,  canvasWidth, y_offset, videoHeight) {
         const padding_x = 20;
         const text_box_width = canvasWidth - (padding_x * 2);
         const lineHeight = 63.6;
@@ -201,15 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ctx.textAlign = 'right';
         ctx.textBaseline = 'top';
-
-        // حساب موضع النص الأخضر
-        const greenTextY = y_offset - textPadding - lineHeight * 2; // نضع النص الأخضر فوق النص الأبيض
-
-        // رسم النص الأخضر
-        ctx.fillStyle = '#6ef13e';
-        ctx.font = '45px LamaRounded';
-        wrapText(ctx, greenText, canvasWidth - padding_x, greenTextY, text_box_width, lineHeight);
-
         // حساب موضع النص الأبيض
         const whiteTextY = y_offset - textPadding - lineHeight; // نضع النص الأبيض مباشرة فوق الفيديو
 
