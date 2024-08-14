@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         const recorder = new MediaRecorder(combinedStream, { 
                             mimeType: 'video/webm; codecs=vp9,opus',
-                            videoBitsPerSecond: 2500000 // 2.5 Mbps for better quality
+                            videoBitsPerSecond: 5000000  // 2.5 Mbps for better quality
                         });
 
                         const chunks = [];
