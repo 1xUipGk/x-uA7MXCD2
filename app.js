@@ -8,43 +8,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const backgroundImage = 'reels_background.jpg';
 
     processBtn.addEventListener('click', async () => {
-    if (!inputVideo.files.length) {
-        alert('الرجاء اختيار فيديو أولاً');
-        return;
-    }
+        if (!inputVideo.files.length) {
+            alert('الرجاء اختيار فيديو أولاً');
+            return;
+        }
 
-    const file = inputVideo.files[0];
-    const watermark = watermarkSelect.value;
+        const file = inputVideo.files[0];
+        const watermark = watermarkSelect.value;
 
-    processBtn.disabled = true;
-    progressBar.value = 0;
+        processBtn.disabled = true;
+        progressBar.value = 0;
 
-    try {
-        const processedVideoBlob = await processVideo(file, watermark, (progress) => {
-            progressBar.value = progress;
-        });
+        try {
+            const processedVideoBlob = await processVideo(file, watermark, (progress) => {
+                progressBar.value = progress;
+            });
 
-        const videoUrl = URL.createObjectURL(processedVideoBlob);
-        preview.src = videoUrl;
-        preview.style.display = 'block';
+            const videoUrl = URL.createObjectURL(processedVideoBlob);
+            preview.src = videoUrl;
+            preview.style.display = 'block';
 
-        // Show download button
-        const downloadBtn = document.getElementById('download-btn');
-        downloadBtn.style.display = 'block';
-        downloadBtn.onclick = () => {
-            const a = document.createElement('a');
-            a.href = videoUrl;
-            a.download = outputVideo.value || 'processed_video.webm';
-            a.click();
-        };
-    } catch (error) {
-        console.error('Error processing video:', error);
-        alert('حدث خطأ أثناء معالجة الفيديو');
-    } finally {
-        processBtn.disabled = false;
-    }
-});
-
+            // Show download button
+            const downloadBtn = document.getElementById('download-btn');
+            downloadBtn.style.display = 'block';
+            downloadBtn.onclick = () => {
+                const a = document.createElement('a');
+                a.href = videoUrl;
+                a.download = outputVideo.value || 'processed_video.webm';
+                a.click();
+            };
+        } catch (error) {
+            console.error('Error processing video:', error);
+            alert('حدث خطأ أثناء معالجة الفيديو');
+        } finally {
+            processBtn.disabled = false;
+        }
+    });
 
     async function processVideo(videoFile, watermarkPath, progressCallback) {
         return new Promise((resolve, reject) => {
@@ -63,7 +62,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     watermark.src = watermarkPath;
                     watermark.onload = () => {
                         const stream = canvas.captureStream();
-                        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=h264' });
+                        const audioContext = new AudioContext();
+                        const audioSource = audioContext.createMediaElementSource(video);
+                        const audioDestination = audioContext.createMediaStreamDestination();
+                        audioSource.connect(audioDestination);
+
+                        const combinedStream = new MediaStream([
+                            ...stream.getVideoTracks(),
+                            ...audioDestination.stream.getAudioTracks()
+                        ]);
+
+                        const recorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm; codecs=vp9,opus' });
 
                         const chunks = [];
                         recorder.ondataavailable = e => chunks.push(e.data);
@@ -80,65 +89,64 @@ document.addEventListener('DOMContentLoaded', () => {
                         let lastTime = 0;
 
                         video.play();
-                        video.addEventListener('play', function () {
-                            function drawFrame(currentTime) {
-                                if (video.paused || video.ended) return;
+                        
+                        function drawFrame(currentTime) {
+                            if (video.paused || video.ended) return;
 
-                                if (currentTime - lastTime >= 1000 / fps) {
-                                    // توسيط الخلفية داخل الكانفاس
-                                    const backgroundWidth = canvas.width;
-                                    const backgroundHeight = canvas.height;
-                                    const backgroundX = 0;
-                                    const backgroundY = 0;
+                            if (currentTime - lastTime >= 1000 / fps) {
+                                // توسيط الخلفية داخل الكانفاس
+                                const backgroundWidth = canvas.width;
+                                const backgroundHeight = canvas.height;
+                                const backgroundX = 0;
+                                const backgroundY = 0;
 
-                                    ctx.drawImage(background, backgroundX, backgroundY, backgroundWidth, backgroundHeight);
+                                ctx.drawImage(background, backgroundX, backgroundY, backgroundWidth, backgroundHeight);
 
-                                    // حساب أبعاد الفيديو بما يتناسب مع الكانفاس
-                                    const maxWidth = 600;
-                                    const maxHeight = 920;
-                                    let newWidth = video.videoWidth;
-                                    let newHeight = video.videoHeight;
+                                // حساب أبعاد الفيديو بما يتناسب مع الكانفاس
+                                const maxWidth = 600;
+                                const maxHeight = 920;
+                                let newWidth = video.videoWidth;
+                                let newHeight = video.videoHeight;
 
-                                    if (newWidth > maxWidth || newHeight > maxHeight) {
-                                        const widthRatio = maxWidth / newWidth;
-                                        const heightRatio = maxHeight / newHeight;
-                                        const ratio = Math.min(widthRatio, heightRatio);
-                                        newWidth = Math.floor(newWidth * ratio);
-                                        newHeight = Math.floor(newHeight * ratio);
-                                    }
-
-                                    const x_offset = Math.floor((canvas.width - newWidth) / 2);
-                                    const y_offset = Math.floor((canvas.height - newHeight) / 2);
-
-                                    const videoCanvas = document.createElement('canvas');
-                                    videoCanvas.width = newWidth;
-                                    videoCanvas.height = newHeight;
-                                    const videoCtx = videoCanvas.getContext('2d');
-
-                                    videoCtx.drawImage(video, 0, 0, newWidth, newHeight);
-
-                                    videoCtx.globalCompositeOperation = 'destination-in';
-                                    roundRect(videoCtx, 0, 0, newWidth, newHeight, 21);
-
-                                    ctx.drawImage(videoCanvas, x_offset, y_offset);
-
-                                    // حساب موقع العلامة المائية وتوسيطها
-                                    const watermarkWidth = 68;
-                                    const watermarkHeight = 33;
-                                    const watermarkX = x_offset + (newWidth - watermarkWidth) / 2;
-                                    const watermarkY = y_offset + newHeight - watermarkHeight - 50;
-                                    ctx.drawImage(watermark, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
-
-                                    frameCount++;
-                                    progressCallback(Math.min((frameCount / (video.duration * fps)) * 100, 100));
-                                    lastTime = currentTime;
+                                if (newWidth > maxWidth || newHeight > maxHeight) {
+                                    const widthRatio = maxWidth / newWidth;
+                                    const heightRatio = maxHeight / newHeight;
+                                    const ratio = Math.min(widthRatio, heightRatio);
+                                    newWidth = Math.floor(newWidth * ratio);
+                                    newHeight = Math.floor(newHeight * ratio);
                                 }
 
-                                requestAnimationFrame(drawFrame);
+                                const x_offset = Math.floor((canvas.width - newWidth) / 2);
+                                const y_offset = Math.floor((canvas.height - newHeight) / 2);
+
+                                const videoCanvas = document.createElement('canvas');
+                                videoCanvas.width = newWidth;
+                                videoCanvas.height = newHeight;
+                                const videoCtx = videoCanvas.getContext('2d');
+
+                                videoCtx.drawImage(video, 0, 0, newWidth, newHeight);
+
+                                videoCtx.globalCompositeOperation = 'destination-in';
+                                roundRect(videoCtx, 0, 0, newWidth, newHeight, 21);
+
+                                ctx.drawImage(videoCanvas, x_offset, y_offset);
+
+                                // حساب موقع العلامة المائية وتوسيطها
+                                const watermarkWidth = 68;
+                                const watermarkHeight = 33;
+                                const watermarkX = x_offset + (newWidth - watermarkWidth) / 2;
+                                const watermarkY = y_offset + newHeight - watermarkHeight - 50;
+                                ctx.drawImage(watermark, watermarkX, watermarkY, watermarkWidth, watermarkHeight);
+
+                                frameCount++;
+                                progressCallback(Math.min((frameCount / (video.duration * fps)) * 100, 100));
+                                lastTime = currentTime;
                             }
 
                             requestAnimationFrame(drawFrame);
-                        });
+                        }
+
+                        requestAnimationFrame(drawFrame);
                     };
                 };
             };
