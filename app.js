@@ -191,24 +191,22 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.closePath();
     }
     
-function drawTexts(ctx, whiteText, greenText, canvasWidth, y_offset, videoWidth, videoHeight) {
-    const padding_x = 20;
-    const text_box_width = videoWidth - (padding_x * 2);
-    const lineHeight = 63.6;
-    const textPadding = 25; // مسافة إضافية فوق الفيديو
+    function drawTexts(ctx, whiteText, greenText, canvasWidth, y_offset, videoHeight) {
+        const padding_x = 20;
+        const text_box_width = canvasWidth - (padding_x * 2);
+        const lineHeight = 63.6;
+        const textPadding = 25; // مسافة إضافية فوق الفيديو
 
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'top';
-        // حساب موضع النص الأبيض
-   // حساب موضع النص الأبيض
-    const whiteTextY = y_offset - textPadding - lineHeight;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
 
-    // رسم النص الأبيض
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '35px LamaRounded';
-    const whiteTextX = (canvasWidth + videoWidth) / 2 - padding_x;
-    wrapText(ctx, whiteText, whiteTextX, whiteTextY, text_box_width, lineHeight);
-}
+        const whiteTextY = y_offset - textPadding - lineHeight; 
+        
+        // رسم النص الأبيض
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '35px LamaRounded';
+        wrapText(ctx, whiteText, canvasWidth - padding_x, whiteTextY, text_box_width, lineHeight);
+    }
 
     function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
         const words = text.split(' ');
