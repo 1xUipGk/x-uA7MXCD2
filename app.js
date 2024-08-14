@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.closePath();
     }
     
-    function drawTexts(ctx, whiteText, greenText, canvasWidth, y_offset, videoHeight) {
+    function drawTexts(ctx, whiteText,  canvasWidth, y_offset, videoHeight) {
         const padding_x = 20;
         const text_box_width = canvasWidth - (padding_x * 2);
         const lineHeight = 63.6;
@@ -199,12 +199,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ctx.textAlign = 'right';
         ctx.textBaseline = 'top';
+        // حساب موضع النص الأبيض
+        const whiteTextY = y_offset - textPadding - lineHeight; // نضع النص الأبيض مباشرة فوق الفيديو
 
-        const whiteTextY = y_offset - textPadding - lineHeight; 
-        
         // رسم النص الأبيض
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = '35px LamaRounded';
+        ctx.font = '45px LamaRounded';
         wrapText(ctx, whiteText, canvasWidth - padding_x, whiteTextY, text_box_width, lineHeight);
     }
 
