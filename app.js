@@ -6,64 +6,23 @@ document.addEventListener('DOMContentLoaded', () => {
         processBtn: document.getElementById('process-btn'),
         progressBar: document.getElementById('progress-bar'),
         preview: document.getElementById('preview'),
-        downloadBtn: document.getElementById('download-btn'),
-        uploadErrors: document.querySelector('.upload-errors')
+        downloadBtn: document.getElementById('download-btn')
     };
 
-    const maxFileSize = 25 * 1024 * 1024; // 25MB
-    const maxFiles = 100;
     const backgroundImage = 'reels_background.jpg';
 
-    // Handle drag and drop for file-attachment
-    const fileAttachment = document.querySelector('file-attachment');
-    fileAttachment.addEventListener('dragover', handleDragOver);
-    fileAttachment.addEventListener('drop', handleDrop);
+    // التحقق من وجود جميع العناصر المطلوبة
+    const missingElements = Object.entries(elements)
+        .filter(([key, value]) => !value)
+        .map(([key]) => key);
 
-    function handleDragOver(event) {
-        event.preventDefault();
-        event.stopPropagation();
-        fileAttachment.classList.add('dragging');
+    if (missingElements.length > 0) {
+        console.error('العناصر التالية مفقودة:', missingElements.join(', '));
+        return;
     }
 
-    function handleDrop(event) {
-        event.preventDefault();
-        event.stopPropagation();
-        fileAttachment.classList.remove('dragging');
-        handleFileSelection(event.dataTransfer.files);
-    }
-
-    elements.inputVideo.addEventListener('change', (event) => {
-        handleFileSelection(event.target.files);
-    });
-
-    function handleFileSelection(files) {
-        elements.uploadErrors.style.display = 'none';
-
-        if (files.length > maxFiles) {
-            displayError('too-many');
-            return;
-        }
-
-        for (const file of files) {
-            if (file.size > maxFileSize) {
-                displayError('too-big');
-                return;
-            }
-        }
-
-        // Clear previous errors and enable processing button
-        elements.uploadErrors.style.display = 'none';
-        elements.processBtn.disabled = false;
-    }
-
-    function displayError(errorType) {
-        elements.uploadErrors.style.display = 'block';
-        elements.uploadErrors.querySelectorAll('.error').forEach(error => {
-            error.style.display = 'none';
-        });
-        elements.uploadErrors.querySelector(`.error.${errorType}`).style.display = 'block';
-        elements.processBtn.disabled = true;
-    }
+    // تحميل الخط المخصص
+    loadCustomFont('LamaRounded', 'LamaRounded-SemiBold.ttf');
 
     elements.processBtn.addEventListener('click', handleProcessClick);
 
@@ -105,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const videoUrl = URL.createObjectURL(videoBlob);
         elements.preview.src = videoUrl;
         elements.preview.style.display = 'block';
+
         elements.downloadBtn.style.display = 'block';
         elements.downloadBtn.onclick = () => downloadVideo(videoUrl);
     }
@@ -134,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const watermark = new Image();
                     watermark.src = watermarkPath;
                     watermark.onload = () => {
-                        const stream = canvas.captureStream(30);
+                        const stream = canvas.captureStream(30); // 30 FPS for better quality
                         const audioContext = new AudioContext();
                         const audioSource = audioContext.createMediaElementSource(video);
                         const audioDestination = audioContext.createMediaStreamDestination();
@@ -145,9 +105,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             ...audioDestination.stream.getAudioTracks()
                         ]);
 
-                        const recorder = new MediaRecorder(combinedStream, {
+                        const recorder = new MediaRecorder(combinedStream, { 
                             mimeType: 'video/webm; codecs=vp9,opus',
-                            videoBitsPerSecond: 5000000
+                            videoBitsPerSecond: 5000000  // 2.5 Mbps for better quality
                         });
 
                         const chunks = [];
@@ -230,28 +190,28 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.quadraticCurveTo(x, y, x + radius, y);
         ctx.closePath();
     }
-
+    
     function drawTexts(ctx, whiteText, canvasWidth, y_offset, videoWidth, videoHeight) {
-        const padding_x = 20;
-        const text_box_width = videoWidth - (padding_x * 2);
-        const lineHeight = 63.6;
-        const textPadding = 25;
+    const padding_x = 20;
+    const text_box_width = videoWidth - (padding_x * 2);
+    const lineHeight = 63.6;
+    const textPadding = 25; // مسافة إضافية فوق الفيديو
 
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'top';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
 
-        // حساب موضع النص الأبيض
-        const whiteTextY = y_offset - textPadding - lineHeight;
+    // حساب موضع النص الأبيض
+    const whiteTextY = y_offset - textPadding - lineHeight; // نضع النص الأبيض مباشرة فوق الفيديو
 
-        // رسم النص الأبيض
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '35px LamaRounded';
+    // رسم النص الأبيض
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '35px LamaRounded';
 
-        // حساب موضع X للنص ليكون محاذيًا للفيديو
-        const textX = (canvasWidth + videoWidth) / 2 - padding_x;
+    // حساب موضع X للنص ليكون محاذيًا للفيديو
+    const textX = (canvasWidth + videoWidth) / 2 - padding_x;
 
-        wrapText(ctx, whiteText, textX, whiteTextY, text_box_width, lineHeight);
-    }
+    wrapText(ctx, whiteText, textX, whiteTextY, text_box_width, lineHeight);
+}
 
     function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
         const words = text.split(' ');
