@@ -74,6 +74,7 @@ input#input-video {
     color: rgb(141, 150, 160);
     text-align: start;
     background-color: rgb(13, 17, 23);
+    transform: translateY(-22px);
 }
 span.upload-choose-text {
     box-sizing: border-box;
