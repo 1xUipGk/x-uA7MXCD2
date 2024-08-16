@@ -187,43 +187,41 @@ document.addEventListener('DOMContentLoaded', () => {
 // <script src="https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.10.1/ffmpeg.min.js"></script>
 
 async function convertToMp4(webmBlob) {
-    return new Promise((resolve, reject) => {
-        const { createFFmpeg, fetchFile } = FFmpeg;
-        const ffmpeg = createFFmpeg({ log: true });
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    const ffmpeg = createFFmpeg({ log: true });
 
-        (async () => {
-            try {
-                await ffmpeg.load();
-                
-                // كتابة ملف WebM إلى نظام الملفات الافتراضي
-                ffmpeg.FS('writeFile', 'input.webm', await fetchFile(webmBlob));
-                
-                // تحويل الفيديو من WebM إلى MP4
-                await ffmpeg.run('-i', 'input.webm', '-c:v', 'libx264', '-crf', '23', '-c:a', 'aac', '-b:a', '128k', 'output.mp4');
-                
-                // قراءة الملف الناتج
-                const data = ffmpeg.FS('readFile', 'output.mp4');
-                
-                // إنشاء Blob من البيانات
-                const mp4Blob = new Blob([data.buffer], { type: 'video/mp4' });
-                
-                resolve(mp4Blob);
-            } catch (error) {
-                console.error('Error during MP4 conversion:', error);
-                reject(error);
-            }
-        })();
-    });
+    try {
+        // تحميل مكتبة FFmpeg
+        await ffmpeg.load();
+        
+        // كتابة ملف WebM إلى نظام الملفات الافتراضي في FFmpeg
+        ffmpeg.FS('writeFile', 'input.webm', await fetchFile(webmBlob));
+        
+        // تحويل الفيديو من WebM إلى MP4 باستخدام FFmpeg
+        await ffmpeg.run('-i', 'input.webm', '-c:v', 'libx264', '-crf', '23', '-c:a', 'aac', '-b:a', '128k', 'output.mp4');
+        
+        // قراءة الملف الناتج من نظام ملفات FFmpeg
+        const data = ffmpeg.FS('readFile', 'output.mp4');
+        
+        // إنشاء Blob من البيانات المحولة
+        const mp4Blob = new Blob([data.buffer], { type: 'video/mp4' });
+        
+        return mp4Blob;
+    } catch (error) {
+        console.error('Error during MP4 conversion:', error);
+        throw error;  // تمرير الخطأ للأعلى ليتم التعامل معه لاحقاً
+    }
 }
 
-// تحديث وظيفة downloadVideo لاستخدام التحويل الجديد
-async function downloadVideo(videoUrl) {
+    async function downloadVideo(videoUrl) {
     const response = await fetch(videoUrl);
     const blob = await response.blob();
     
     try {
-        const mp4Blob = await convertToMp4(blob);
+        const mp4Blob = await convertToMp4(blob);  // تحويل الفيديو إلى MP4
         const mp4Url = URL.createObjectURL(mp4Blob);
+        
+        // تنزيل الفيديو بصيغة MP4
         const a = document.createElement('a');
         a.href = mp4Url;
         a.download = 'processed_video.mp4';
@@ -233,6 +231,8 @@ async function downloadVideo(videoUrl) {
         URL.revokeObjectURL(mp4Url);
     } catch (error) {
         console.warn('Failed to convert to MP4, downloading WebM instead:', error);
+        
+        // في حال فشل التحويل، قم بتنزيل الفيديو بصيغة WebM
         const a = document.createElement('a');
         a.href = videoUrl;
         a.download = 'processed_video.webm';
@@ -241,6 +241,7 @@ async function downloadVideo(videoUrl) {
         document.body.removeChild(a);
     }
 }
+
     function roundRect(ctx, x, y, width, height, radius) {
         ctx.beginPath();
         ctx.moveTo(x + radius, y);
