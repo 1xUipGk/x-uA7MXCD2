@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function downloadVideo(videoUrl) {
         const a = document.createElement('a');
         a.href = videoUrl;
-        a.download = 'processed_video.webm';
+        a.download = 'processed_video.mp4';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -106,14 +106,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         ]);
 
                         const recorder = new MediaRecorder(combinedStream, { 
-                            mimeType: 'video/webm; codecs=vp9,opus',
-                            videoBitsPerSecond: 5000000  // 2.5 Mbps for better quality
+                            mimeType: 'video/mp4; codecs=h264,aac',
+                            videoBitsPerSecond: 8000000  // 8 Mbps للحصول على جودة أفضل
                         });
 
                         const chunks = [];
                         recorder.ondataavailable = e => chunks.push(e.data);
                         recorder.onstop = () => {
-                            const blob = new Blob(chunks, { type: 'video/webm' });
+                            const blob = new Blob(chunks, { type: 'video/mp4' });
                             resolve(blob);
                         };
 
@@ -192,26 +192,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function drawTexts(ctx, whiteText, canvasWidth, y_offset, videoWidth, videoHeight) {
-    const padding_x = 20;
-    const text_box_width = videoWidth - (padding_x * 2);
-    const lineHeight = 63.6;
-    const textPadding = 25; // مسافة إضافية فوق الفيديو
+        const padding_x = 20;
+        const text_box_width = videoWidth - (padding_x * 2);
+        const lineHeight = 63.6;
+        const textPadding = 25; // مسافة إضافية فوق الفيديو
 
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'top';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
 
-    // حساب موضع النص الأبيض
-    const whiteTextY = y_offset - textPadding - lineHeight; // نضع النص الأبيض مباشرة فوق الفيديو
+        // حساب موضع النص الأبيض
+        const whiteTextY = y_offset - textPadding - lineHeight; // نضع النص الأبيض مباشرة فوق الفيديو
 
-    // رسم النص الأبيض
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '35px LamaRounded';
+        // رسم النص الأبيض
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '35px LamaRounded';
 
-    // حساب موضع X للنص ليكون محاذيًا للفيديو
-    const textX = (canvasWidth + videoWidth) / 2 - padding_x;
+        // حساب موضع X للنص ليكون محاذيًا للفيديو
+        const textX = (canvasWidth + videoWidth) / 2 - padding_x;
 
-    wrapText(ctx, whiteText, textX, whiteTextY, text_box_width, lineHeight);
-}
+        wrapText(ctx, whiteText, textX, whiteTextY, text_box_width, lineHeight);
+    }
 
     function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
         const words = text.split(' ');
