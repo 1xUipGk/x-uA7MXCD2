@@ -69,15 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.downloadBtn.onclick = () => downloadVideo(videoUrl);
     }
 
-    function downloadVideo(videoUrl) {
-        const a = document.createElement('a');
-        a.href = videoUrl;
-        a.download = 'processed_video.mp4';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-    }
-
     async function processVideo(videoFile, watermarkPath, whiteText, progressCallback) {
         return new Promise((resolve, reject) => {
             const video = document.createElement('video');
@@ -105,15 +96,29 @@ document.addEventListener('DOMContentLoaded', () => {
                             ...audioDestination.stream.getAudioTracks()
                         ]);
 
-                        const recorder = new MediaRecorder(combinedStream, { 
-                            mimeType: 'video/mp4; codecs=h264,aac',
-                            videoBitsPerSecond: 8000000  // 8 Mbps للحصول على جودة أفضل
-                        });
+                        let recorder;
+                        const options = [
+                            { mimeType: 'video/webm; codecs=vp9,opus', videoBitsPerSecond: 8000000 },
+                            { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 8000000 },
+                            { mimeType: 'video/webm', videoBitsPerSecond: 8000000 }
+                        ];
+
+                        for (const option of options) {
+                            if (MediaRecorder.isTypeSupported(option.mimeType)) {
+                                recorder = new MediaRecorder(combinedStream, option);
+                                break;
+                            }
+                        }
+
+                        if (!recorder) {
+                            reject(new Error('No suitable recording format found'));
+                            return;
+                        }
 
                         const chunks = [];
                         recorder.ondataavailable = e => chunks.push(e.data);
                         recorder.onstop = () => {
-                            const blob = new Blob(chunks, { type: 'video/mp4' });
+                            const blob = new Blob(chunks, { type: recorder.mimeType });
                             resolve(blob);
                         };
 
@@ -177,6 +182,65 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // أولاً، تحتاج إلى إضافة مكتبة FFmpeg.js إلى مشروعك
+// يمكنك إضافتها عن طريق إضافة هذا السطر في ملف HTML الخاص بك:
+// <script src="https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.10.1/ffmpeg.min.js"></script>
+
+async function convertToMp4(webmBlob) {
+    return new Promise((resolve, reject) => {
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: true });
+
+        (async () => {
+            try {
+                await ffmpeg.load();
+                
+                // كتابة ملف WebM إلى نظام الملفات الافتراضي
+                ffmpeg.FS('writeFile', 'input.webm', await fetchFile(webmBlob));
+                
+                // تحويل الفيديو من WebM إلى MP4
+                await ffmpeg.run('-i', 'input.webm', '-c:v', 'libx264', '-crf', '23', '-c:a', 'aac', '-b:a', '128k', 'output.mp4');
+                
+                // قراءة الملف الناتج
+                const data = ffmpeg.FS('readFile', 'output.mp4');
+                
+                // إنشاء Blob من البيانات
+                const mp4Blob = new Blob([data.buffer], { type: 'video/mp4' });
+                
+                resolve(mp4Blob);
+            } catch (error) {
+                console.error('Error during MP4 conversion:', error);
+                reject(error);
+            }
+        })();
+    });
+}
+
+// تحديث وظيفة downloadVideo لاستخدام التحويل الجديد
+async function downloadVideo(videoUrl) {
+    const response = await fetch(videoUrl);
+    const blob = await response.blob();
+    
+    try {
+        const mp4Blob = await convertToMp4(blob);
+        const mp4Url = URL.createObjectURL(mp4Blob);
+        const a = document.createElement('a');
+        a.href = mp4Url;
+        a.download = 'processed_video.mp4';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(mp4Url);
+    } catch (error) {
+        console.warn('Failed to convert to MP4, downloading WebM instead:', error);
+        const a = document.createElement('a');
+        a.href = videoUrl;
+        a.download = 'processed_video.webm';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+}
     function roundRect(ctx, x, y, width, height, radius) {
         ctx.beginPath();
         ctx.moveTo(x + radius, y);
