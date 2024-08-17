@@ -260,7 +260,8 @@ async function convertToMp4(webmBlob) {
         const padding_x = 20;
         const text_box_width = videoWidth - (padding_x * 2);
         const lineHeight = 63.6;
-        const textPadding = 25; // مسافة إضافية فوق الفيديو
+        const textPadding = 40
+        ; // مسافة إضافية فوق الفيديو
 
         ctx.textAlign = 'right';
         ctx.textBaseline = 'top';
